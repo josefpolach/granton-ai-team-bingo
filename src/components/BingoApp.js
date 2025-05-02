@@ -6,7 +6,7 @@ const BingoApp = () => {
         "Používá `print()` místo debuggeru",
         "Pushuje změny rovnou do `main`",
         "Mluví na mute v callu",
-        "Říká 'pojďme to probrat offline'",
+        "Říká 'to proberte offline'",
         "Říká, že nasadí za 10 minut, ale trvá to věčnost",
         "Nejvic kasle na merge Dependabota",
         "Pouziva na poznamky Obsidian",
@@ -29,6 +29,7 @@ const BingoApp = () => {
     const [timer, setTimer] = useState(0);
     const [timerInterval, setTimerInterval] = useState(null);
     const [allAnswered, setAllAnswered] = useState(false);
+    const [finishDateTime, setFinishDateTime] = useState(null);
 
     // Funkce pro náhodné promíchání otázek
     const shuffleArray = (array) => {
@@ -54,10 +55,11 @@ const BingoApp = () => {
         setTimerInterval(interval);
     };
 
-    // Ukončit hru
+    // Ukončit hru a uložit aktuální datum a čas
     const finishGame = () => {
         setGameFinished(true);
         clearInterval(timerInterval);
+        setFinishDateTime(new Date());
     };
 
     // Zpracování změn v odpovědích
@@ -133,6 +135,14 @@ const BingoApp = () => {
                                     <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
                                         <p className="font-bold">Bingo dokončeno!</p>
                                         <p>Tvůj čas: {formatTime(timer)}</p>
+                                        <p>Dokončeno: {finishDateTime.toLocaleString('cs-CZ', {
+                                            day: '2-digit',
+                                            month: '2-digit',
+                                            year: 'numeric',
+                                            hour: '2-digit',
+                                            minute: '2-digit',
+                                            second: '2-digit'
+                                        })}</p>
                                     </div>
                                 ) : (
                                     <button
