@@ -1,56 +1,33 @@
-# Dockerfile pro Team Bingo aplikaci
+# Build stage
+FROM node:16-alpine as build
 
-# Použijeme oficiální Node.js image jako základ
-FROM node:18-alpine AS builder
-
-# Nastavíme pracovní adresář
 WORKDIR /app
 
-# Vytvoříme novou React aplikaci
-RUN npx create-react-app team-bingo
+# Nejprve zkopírujeme pouze package.json a package-lock.json a nainstalujeme závislosti
+# Toto umožní lepší využití Docker cache
+COPY package*.json ./
+RUN npm install
 
-# Přesuneme se do adresáře aplikace
-WORKDIR /app/team-bingo
+# Poté zkopírujeme zbytek souborů
+COPY . .
 
-# Nainstalujeme Tailwind CSS a další závislosti
-RUN npm install tailwindcss postcss autoprefixer
-
-# Inicializace Tailwind CSS
-RUN npx tailwindcss init -p
-
-# Zkopírujeme tailwind konfiguraci
-COPY ./tailwind.config.js ./tailwind.config.js
-
-# Zkopírujeme hlavní komponentu do src adresáře
-COPY ./TeamBingo.jsx ./src/TeamBingo.jsx
-
-# Upravíme App.js, aby používal naši TeamBingo komponentu
-COPY ./App.js ./src/App.js
-
-# Upravíme index.css pro Tailwind
-COPY ./index.css ./src/index.css
+# Opravíme chybu s Babel - zaručíme správnou verzi
+RUN npm install --save-dev @babel/plugin-proposal-private-property-in-object
 
 # Sestavíme aplikaci
 RUN npm run build
 
-# Použijeme nginx pro hostování sestavené aplikace
-FROM nginx:alpine
+# Produkční stage
+FROM nginx:stable-alpine
 
-# Zkopírujeme sestavenou aplikaci do nginx
-COPY --from=builder /app/team-bingo/build /usr/share/nginx/html
+# Zkopírujeme build ze stavebního stage do nginx
+COPY --from=build /app/build /usr/share/nginx/html
 
-# Nakonfigurujeme nginx, aby aplikace běžela pouze na specifické IP adrese
-COPY ./nginx.conf /etc/nginx/conf.d/default.conf
+# Nakonfigurujeme nginx tak, aby všechny požadavky směřoval na index.html (pro SPA routing)
+RUN echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Redirecting...</title><script>window.location.href = "/";</script></head><body></body></html>' > /usr/share/nginx/html/404.html
 
-# Proměnná prostředí pro omezení přístupu
-ENV TEAM_SECRET_KEY="tajne-heslo-pro-tym-2025"
+# Vystavíme port 80
+EXPOSE 80
 
-# Vystavíme port 8000 místo standardního 80
-EXPOSE 8000
-
-# Přidáme vlastní startup skript
-COPY ./start-container.sh /start-container.sh
-RUN chmod +x /start-container.sh
-
-# Spustíme vlastní startup skript
-CMD ["/start-container.sh"]
+# Spustíme nginx
+CMD ["nginx", "-g", "daemon off;"]
